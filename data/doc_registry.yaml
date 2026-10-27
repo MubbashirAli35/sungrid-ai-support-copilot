@@ -1,0 +1,61 @@
+# Per-document metadata. The first category is the primary one; any others are
+# secondary. Retrieval filters on the full list (match any), so a document that
+# genuinely straddles two categories is found from either.
+# section_overrides: per-section status for text that must not be quoted as policy.
+categories:
+  - program_policies
+  - incentive_rebate
+  - billing_account
+  - technical_installation
+  - company_updates
+
+documents:
+  01_program_policies.md:
+    categories: [program_policies]
+    rationale: Membership tiers, conduct, grievances, privacy.
+  02_incentive_rebate_programs.md:
+    categories: [incentive_rebate]
+    rationale: Rooftop rebate rules, appeals, funding, documentation.
+  03_billing_faqs.md:
+    categories: [billing_account]
+    rationale: Bills, payments, true-up, disputes.
+  04_technical_installation_guidance.md:
+    categories: [technical_installation]
+    rationale: Site assessment, inverters, fault codes, interconnection.
+  05_company_updates.md:
+    categories: [company_updates]
+    rationale: Newsletter-style news. Not authoritative policy.
+    section_overrides:
+      Upcoming Changes:
+        status: unreleased
+        note: Describes a fourth tier that is not finalized; must not be used for eligibility guidance.
+  06_ambiguous_rebate_billing_adjustments.md:
+    categories: [incentive_rebate, billing_account]
+    rationale: >
+      Rebate reversal is decided by the Incentive Program committee (incentive_rebate)
+      and executed as a billing adjustment (billing_account). The document says itself
+      that it fits neither category alone, so it carries both labels.
+  07_installer_certification.md:
+    categories: [program_policies]
+    rationale: Rules for the approved-installer list; ties into rebate eligibility but is a standing program rule.
+  08_governance_voting.md:
+    categories: [program_policies]
+    rationale: Voting rights and governance. Check against doc 01 for conflicts.
+  09_battery_storage_incentive.md:
+    categories: [incentive_rebate]
+    rationale: Battery add-on incentive, dependent on an approved rooftop rebate.
+  10_low_income_bill_credit.md:
+    categories: [incentive_rebate]
+    rationale: Monthly bill credit program; an incentive, though it appears on the bill.
+  11_net_metering_trueup.md:
+    categories: [billing_account]
+    rationale: Annual true-up calculation and timing.
+  12_autopay_failure_policy.md:
+    categories: [billing_account]
+    rationale: Autopay failure, retry and re-enrolment.
+  13_battery_storage_installation.md:
+    categories: [technical_installation]
+    rationale: Battery configuration, fire code, sizing, commissioning.
+  14_annual_impact_report.md:
+    categories: [company_updates]
+    rationale: Annual statistics. Not authoritative policy.
