@@ -13,6 +13,7 @@ QDRANT_PATH = ROOT / "qdrant_data"
 COLLECTION = "sungrid_kb"
 TRACE_DIR = ROOT / "traces"
 
+FALLBACK_MARGIN = 0.05  # provisional; see eval/reports for how it was chosen
 EMBED_MODEL = "BAAI/bge-small-en-v1.5"
 RUNTIME_MODEL = os.getenv("COPILOT_RUNTIME_MODEL", "claude-haiku-5-5")
 JUDGE_MODEL = os.getenv("COPILOT_JUDGE_MODEL", "claude-sonnet-5-5")
