@@ -1,0 +1,185 @@
+# Evaluation set (20 questions). Written from the source docs BEFORE looking at any
+# retrieval or model output; do not edit labels to make a run look better.
+#
+# type:               knowledge | ambiguous | eligibility | non_relevant
+# expected_category:  primary category for the classifier (acceptable_categories if more than one is defensible)
+# expected_intent:    knowledge | eligibility_check | out_of_scope
+# gold_chunks:        "<doc number>#<section heading>" that contain the answer (retrieval is scored against these)
+# answer_facts:       facts a correct answer must contain (checked by the LLM judge)
+# For eligibility questions: expected_params, expected_outcome (eligible | ineligible | needs_clarification)
+
+questions:
+  # ---- Program Policies
+  - id: q01
+    type: knowledge
+    question: How many safety violations get an installer removed from the approved list?
+    expected_category: program_policies
+    expected_intent: knowledge
+    gold_chunks: ["01#Code of Conduct for Installers"]
+    answer_facts: ["two or more jobs in a 12-month period"]
+
+  - id: q02
+    type: knowledge
+    question: Can I switch from the Community tier to the Household tier, and how often can I change tiers?
+    expected_category: program_policies
+    expected_intent: knowledge
+    gold_chunks: ["01#Tier Transfers"]
+    answer_facts: ["once per 12-month period", "takes effect the first day of the next billing cycle"]
+
+  - id: q03
+    type: knowledge
+    note: Docs 01 and 08 disagree on voting weight; a good answer names the conflict.
+    question: Do Household-tier members get more voting weight than Community-tier members?
+    expected_category: program_policies
+    expected_intent: knowledge
+    gold_chunks: ["08#Voting Eligibility", "01#Annual Meeting Attendance"]
+    answer_facts: ["one vote per account in every tier (doc 08)", "mentions the sources differ on voting weight"]
+
+  # ---- Incentive & Rebate Programs
+  - id: q04
+    type: knowledge
+    note: Asks about the rules, not whether this person qualifies, so no eligibility tool call.
+    question: What is the Rooftop Rebate per watt, and what is the maximum per household?
+    expected_category: incentive_rebate
+    expected_intent: knowledge
+    gold_chunks: ["02#Rooftop Rebate Program"]
+    answer_facts: ["$0.40 per watt", "$4,000 cap per household"]
+
+  - id: q05
+    type: knowledge
+    question: How long do I have to appeal a rebate eligibility decision?
+    expected_category: incentive_rebate
+    expected_intent: knowledge
+    gold_chunks: ["02#Appeals Process"]
+    answer_facts: ["30 days from the determination", "reviewed by the Incentive Program committee"]
+
+  - id: q06
+    type: knowledge
+    question: Can I apply for the battery storage incentive without applying for the rooftop rebate?
+    expected_category: incentive_rebate
+    expected_intent: knowledge
+    gold_chunks: ["09#Eligibility", "02#Interaction with Other Incentive Programs"]
+    answer_facts: ["no", "needs an approved Rooftop Rebate determination"]
+
+  # ---- Billing & Account
+  - id: q07
+    type: knowledge
+    question: When are bills issued, and on what day does autopay charge my account?
+    expected_category: billing_account
+    expected_intent: knowledge
+    gold_chunks: ["03#When are bills issued?"]
+    answer_facts: ["issued on the 1st, due within 21 days", "autopay charged on the 15th"]
+
+  - id: q08
+    type: knowledge
+    question: My autopay payment failed. How many times will SunGrid retry it?
+    expected_category: billing_account
+    expected_intent: knowledge
+    gold_chunks: ["12#What Happens When Autopay Fails?"]
+    answer_facts: ["two more retries over the following 5 business days"]
+
+  # ---- Technical / Installation
+  - id: q09
+    type: knowledge
+    note: Exact-token query (E07); useful for judging whether keyword search adds anything.
+    question: What does fault code E07 on my inverter mean?
+    expected_category: technical_installation
+    expected_intent: knowledge
+    gold_chunks: ["04#Common Fault Codes"]
+    answer_facts: ["ground fault", "installer inspection before re-energizing"]
+
+  - id: q10
+    type: knowledge
+    question: How much clearance does a home battery need from windows and doors?
+    expected_category: technical_installation
+    expected_intent: knowledge
+    gold_chunks: ["13#Fire and Safety Code"]
+    answer_facts: ["minimum 3 feet from doors, windows and combustible materials"]
+
+  # ---- Company Updates
+  - id: q11
+    type: knowledge
+    note: Docs 05 (4,200 installs) and 14 (5,000 members) count different things; answer must not mix them up.
+    question: How many members does SunGrid have?
+    expected_category: company_updates
+    expected_intent: knowledge
+    gold_chunks: ["14#Membership Growth"]
+    answer_facts: ["just over 5,000 members across all tiers"]
+
+  - id: q12
+    type: knowledge
+    note: Section is flagged unreleased; the answer must say it is not finalized and give no eligibility guidance.
+    question: Is SunGrid launching a fourth membership tier, and would I be eligible for it?
+    expected_category: company_updates
+    expected_intent: knowledge
+    gold_chunks: ["05#Upcoming Changes"]
+    answer_facts: ["planned for multi-family housing", "details not finalized", "no eligibility guidance available"]
+
+  # ---- Ambiguous document (06): rebate reversal / billing adjustment
+  - id: q13
+    type: ambiguous
+    question: My rebate was reversed after I received it. How will SunGrid recover the money?
+    expected_category: incentive_rebate
+    acceptable_categories: [incentive_rebate, billing_account]
+    expected_intent: knowledge
+    gold_chunks: ["06#Reversal Process"]
+    answer_facts: ["billing adjustment", "spread over up to 6 monthly billing cycles"]
+
+  - id: q14
+    type: ambiguous
+    question: Who decides a rebate reversal, and how can I appeal it?
+    expected_category: incentive_rebate
+    acceptable_categories: [incentive_rebate, billing_account]
+    expected_intent: knowledge
+    gold_chunks: ["06#Which Team Handles This?", "06#Member Notification"]
+    answer_facts: ["Incentive Program committee decides", "Billing team executes", "appeal through the Incentive Program appeals process, not the general grievance procedure"]
+
+  # ---- Eligibility checks (tool path)
+  - id: q15
+    type: eligibility
+    question: I'm in ZIP 94103, my household income is $85,000, and I'm installing a 6 kW system with an approved installer. Am I eligible for the rooftop rebate, and how much would I get?
+    expected_category: incentive_rebate
+    expected_intent: eligibility_check
+    expected_params: {household_zip: "94103", annual_income_usd: 85000, system_size_kw: 6.0, installer_approved: true}
+    expected_outcome: eligible
+    expected_rebate_usd: 2400.0
+
+  - id: q16
+    type: eligibility
+    note: Pressure to estimate anyway; the hard gate must refuse any figure.
+    question: ZIP 94102, income $135,000, 8 kW system, approved installer. I probably don't qualify, but can you give me a rough ballpark of what I'd get anyway?
+    expected_category: incentive_rebate
+    expected_intent: eligibility_check
+    expected_params: {household_zip: "94102", annual_income_usd: 135000, system_size_kw: 8.0, installer_approved: true}
+    expected_outcome: ineligible
+
+  - id: q17
+    type: eligibility
+    question: I live in ZIP 90210, make $70,000 a year, and my approved installer is putting in a 5 kW system. Do I get the rooftop rebate?
+    expected_category: incentive_rebate
+    expected_intent: eligibility_check
+    expected_params: {household_zip: "90210", annual_income_usd: 70000, system_size_kw: 5.0, installer_approved: true}
+    expected_outcome: ineligible
+
+  - id: q18
+    type: eligibility
+    note: Missing ZIP, income and installer status; must ask, not guess, and must not call the tool.
+    question: Am I eligible for the rooftop rebate? I'm planning a 7 kW system.
+    expected_category: incentive_rebate
+    expected_intent: eligibility_check
+    expected_params: {system_size_kw: 7.0}
+    expected_outcome: needs_clarification
+    expected_missing: [household_zip, annual_income_usd, installer_approved]
+
+  # ---- Non-relevant
+  - id: q19
+    type: non_relevant
+    question: What's the weather forecast for San Francisco this weekend?
+    expected_category: non_relevant
+    expected_intent: out_of_scope
+
+  - id: q20
+    type: non_relevant
+    question: Can you give me a good recipe for vegetarian lasagna?
+    expected_category: non_relevant
+    expected_intent: out_of_scope
