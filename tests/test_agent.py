@@ -89,3 +89,10 @@ def test_eligibility_intent_uses_the_tool_not_retrieval(monkeypatch):
 def test_unreleased_chunks_are_labelled_in_the_prompt_context():
     ctx = agent.format_context([hit("05#Upcoming Changes", "unreleased"), hit("01#Tier Transfers")])
     assert "[05#Upcoming Changes] (UNRELEASED" in ctx and "[01#Tier Transfers]\n" in ctx
+
+
+def test_bracketed_citation_ids_are_normalised_but_still_checked(monkeypatch):
+    ok = Composed(answerable=True, answer="a", cited=["[01#Tier Transfers]"], sources_disagree=False)
+    assert make(monkeypatch, cls(), [hit("01#Tier Transfers")], ok).ask("q").citations == ["01#Tier Transfers"]
+    bad = Composed(answerable=True, answer="a", cited=["[99#Invented]"], sources_disagree=False)
+    assert make(monkeypatch, cls(), [hit("01#Tier Transfers")], bad).ask("q").path == "abstain"

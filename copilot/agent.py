@@ -68,6 +68,9 @@ def compose(question: str, hits: list[Hit]) -> tuple[Composed | None, str]:
     if not out.answerable:
         return None, "model said not answerable"
     retrieved = {h.key for h in hits}
+    # The model sometimes echoes the id with its square brackets; strip them, then still require
+    # every citation to be one of the retrieved excerpts.
+    out.cited = [c.strip().strip("[]").strip() for c in out.cited]
     if not out.cited or not set(out.cited) <= retrieved:
         return None, "citations missing or not among the retrieved excerpts"
     return out, ""

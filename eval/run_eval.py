@@ -1,10 +1,13 @@
 """Eval runner.
   python -m eval.run_eval retrieval   scores retrieval (no LLM calls) -> eval/reports/retrieval.md
   python -m eval.run_eval classifier  scores the LLM classifier, 3 runs -> eval/reports/classifier.md
-  python -m eval.run_eval eligibility scores extraction and the hard gate, 3 runs -> eval/reports/eligibility.md"""
+  python -m eval.run_eval eligibility scores extraction and the hard gate, 3 runs -> eval/reports/eligibility.md
+  python -m eval.run_eval e2e         full copilot on all questions, LLM judge, 3 runs -> eval/reports/end_to_end.md"""
 import argparse
 import datetime
 from pathlib import Path
+
+from pydantic import BaseModel
 
 from copilot.registry import load_registry
 from copilot.retrieval import Retriever
@@ -14,7 +17,18 @@ from eval.scoring import (category_correct, gate_respected, intent_correct, load
 REPORT = Path(__file__).resolve().parent / "reports" / "retrieval.md"
 CLASSIFIER_REPORT = REPORT.with_name("classifier.md")
 ELIGIBILITY_REPORT = REPORT.with_name("eligibility.md")
+E2E_REPORT = REPORT.with_name("end_to_end.md")
+E2E_RAW = REPORT.with_name("e2e_runs.jsonl")  # gitignored
+JUDGE_PROMPT = Path(__file__).resolve().parent / "judge_v1.md"
 RUNS = 3
+
+# In-domain questions the knowledge base cannot answer; the copilot should say so. Written after
+# the first manual try-outs of the copilot, so not independent of it.
+UNANSWERABLE = [
+    dict(id="u1", question="What is the warranty period on the solar panels?"),
+    dict(id="u2", question="How do I cancel my membership?"),
+    dict(id="u3", question="How much does the CEO of SunGrid earn?"),
+]
 
 # Extra extraction probes, written before the first eligibility run; they target the
 # failure modes the gate depends on: guessing a missing field, and obeying text inside the message.
@@ -223,8 +237,131 @@ def run_eligibility():
     print("\n".join(lines))
 
 
+class FactVerdict(BaseModel):
+    fact: str
+    supported: bool
+
+
+class Judgement(BaseModel):
+    facts: list[FactVerdict]
+    contradiction: bool
+
+
+def judge(question: dict, answer: str) -> Judgement:
+    from copilot import config, llm
+    user = (f"Question: {question['question']}\n\nAnswer:\n{answer}\n\n"
+            "Required facts:\n" + "\n".join(f"- {f}" for f in question["answer_facts"]))
+    return llm.parse(config.JUDGE_MODEL, JUDGE_PROMPT.read_text(), user, Judgement, purpose="judge")
+
+
+def grade(q: dict, r) -> dict:
+    """All pass/fail checks for one question and one copilot result."""
+    g = {}
+    cls = r.classification
+    g["routed"] = bool(cls) and intent_correct(cls["intent"], q) if q["type"] != "unanswerable" else None
+    if q["type"] in ("knowledge", "ambiguous"):
+        keys = [h["key"] for h in (r.retrieval or {}).get("hits", [])]
+        g["hit5"] = bool(recall_at_k(keys, q["gold_chunks"], 5))
+        g["cited_gold"] = bool(set(r.citations) & set(q["gold_chunks"]))
+        g["no_tool"] = r.eligibility is None
+        verdict = judge(q, r.answer) if r.path == "knowledge" else None
+        g["facts"] = [f.supported for f in verdict.facts] if verdict else [False] * len(q["answer_facts"])
+        g["contradiction"] = verdict.contradiction if verdict else False
+        g["pass"] = g["no_tool"] and g["cited_gold"] and all(g["facts"]) and not g["contradiction"]
+    elif q["type"] == "eligibility":
+        e = r.eligibility or {}
+        extracted = {n: e.get("params", {}).get(n) for n in eligibility_fields()}
+        g["params"] = params_correct(extracted, q)
+        g["gate"] = bool(e) and gate_respected(r.answer, e["tool_called"], e["tool_result"], q)
+        g["pass"] = g["routed"] and g["params"] and g["gate"]
+    elif q["type"] == "non_relevant":
+        g["pass"] = r.path == "out_of_scope" and r.retrieval is None
+    else:  # unanswerable
+        g["pass"] = r.path in ("abstain", "out_of_scope")
+        g["abstained"] = r.path == "abstain"
+    return g
+
+
+def eligibility_fields():
+    from copilot.tools.eligibility import FIELDS
+    return FIELDS
+
+
+def run_e2e():
+    import json
+    import statistics
+
+    from copilot import llm
+    from copilot.agent import Copilot
+    cases = load_questions() + [dict(q, type="unanswerable") for q in UNANSWERABLE]
+    bot = Copilot(trace=False)
+    results = {q["id"]: [] for q in cases}
+    raw = []
+    for run in range(RUNS):
+        for q in cases:
+            r = bot.ask(q["question"])
+            g = grade(q, r)
+            results[q["id"]].append((r, g))
+            raw.append(dict(run=run, id=q["id"], grade=g, result=r.__dict__))
+    bot.close()
+    E2E_RAW.write_text("\n".join(json.dumps(x, default=str) for x in raw) + "\n")
+
+    rows, by_type, fails = [], {}, []
+    for q in cases:
+        rs = results[q["id"]]
+        passed = sum(g["pass"] for _, g in rs)
+        by_type.setdefault(q["type"], []).append(passed)
+        paths = sorted({r.path for r, _ in rs})
+        note = ""
+        if q["type"] in ("knowledge", "ambiguous"):
+            note = (f"hit@5 {sum(g['hit5'] for _, g in rs)}/{RUNS}; cited gold {sum(g['cited_gold'] for _, g in rs)}/{RUNS}; "
+                    f"facts {sum(sum(g['facts']) for _, g in rs)}/{len(q['answer_facts']) * RUNS}; "
+                    f"contradiction {sum(g['contradiction'] for _, g in rs)}")
+        elif q["type"] == "eligibility":
+            note = f"params {sum(g['params'] for _, g in rs)}/{RUNS}; gate {sum(g['gate'] for _, g in rs)}/{RUNS}"
+        if passed < RUNS:
+            fails.append((q, rs))
+        rows.append(f"| {q['id']} | {q['type']} | {passed}/{RUNS} | {', '.join(paths)} | {note}{'' if passed == RUNS else ' **FAIL**'} |")
+
+    runtime = [r for rs in results.values() for r, _ in rs]
+    secs = sorted(r.seconds for r in runtime)
+    runtime_cost = sum(r.cost_usd for r in runtime)
+    judge_cost = llm.cost_usd([u for u in llm.USAGE if u["purpose"] == "judge"])
+    total_pass = sum(sum(v) for v in by_type.values())
+    n_total = len(cases) * RUNS
+    summary = [f"| {t} | {sum(v)}/{len(v) * RUNS} |" for t, v in by_type.items()]
+    gate_rows = [g for q in cases if q["type"] == "eligibility" for _, g in results[q["id"]]]
+    lines = [
+        "# End-to-end results",
+        f"Generated {datetime.date.today()} by `python -m eval.run_eval e2e`. Full copilot "
+        f"(runtime model {llm.config.RUNTIME_MODEL}, judge {llm.config.JUDGE_MODEL}), {len(cases)} questions "
+        f"({len(UNANSWERABLE)} are unanswerable probes) x {RUNS} runs.",
+        "",
+        f"- Overall pass: {total_pass}/{n_total} ({total_pass / n_total:.0%})",
+        f"- Hard gate respected on eligibility questions: {sum(g['gate'] for g in gate_rows)}/{len(gate_rows)}",
+        f"- Runtime cost per question: ${runtime_cost / len(runtime):.4f} (judge cost for this run, not a runtime cost: ${judge_cost:.4f})",
+        f"- Latency per question: median {statistics.median(secs):.1f}s, max {secs[-1]:.1f}s",
+        "",
+        "| type | passed |", "|---|---|", *summary, "",
+        "Pass means: knowledge = no tool call, a gold chunk cited, every required fact present per the judge, "
+        "no contradiction; eligibility = routed, parameters exact, gate respected; non_relevant = refused with no retrieval; "
+        "unanswerable = abstained.", "",
+        "| id | type | passed | paths seen | detail |", "|---|---|---|---|---|", *rows, "",
+    ]
+    if fails:
+        lines += ["## Failing cases (last failing run shown)", ""]
+        for q, rs in fails:
+            r, g = next((x for x in reversed(rs) if not x[1]["pass"]))
+            lines += [f"**{q['id']}** {q['question']}", f"- path: {r.path}; grade: {g}",
+                      f"- answer: {r.answer}", ""]
+    lines += ["Caveats: 23 questions, one author; the LLM judge is a second model reading a short answer against "
+              "listed facts and is itself unvalidated against human grading; runs cannot be seeded."]
+    E2E_REPORT.write_text("\n".join(lines) + "\n")
+    print("\n".join(lines))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("suite", choices=["retrieval", "classifier", "eligibility"])
+    parser.add_argument("suite", choices=["retrieval", "classifier", "eligibility", "e2e"])
     args = parser.parse_args()
-    {"retrieval": run_retrieval, "classifier": run_classifier, "eligibility": run_eligibility}[args.suite]()
+    {"retrieval": run_retrieval, "classifier": run_classifier, "eligibility": run_eligibility, "e2e": run_e2e}[args.suite]()
