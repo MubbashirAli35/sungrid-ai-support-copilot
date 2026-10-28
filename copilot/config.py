@@ -24,3 +24,10 @@ def anthropic_api_key() -> str:
     if not key:
         raise RuntimeError("ANTHROPIC_API_KEY is not set; copy .env.example to .env")
     return key
+
+
+# USD per 1M tokens (input, output), from Anthropic list prices for prompts up to 100K tokens.
+PRICES = {
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-sonnet-5-5": (2.00, 10.00),
+}
