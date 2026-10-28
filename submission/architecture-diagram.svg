@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 1010" width="1700" height="1010" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+    <style>
+      .t{font-size:14px;fill:#0f172a} .b{font-weight:700} .s{font-size:12.5px;fill:#475569} .h{font-size:15px;font-weight:700;fill:#0f172a}
+      .z{font-size:13px;font-weight:700;letter-spacing:.6px;fill:#475569}
+      .box{fill:#fff;stroke:#334155;stroke-width:1.5} .prop{fill:#fff;stroke:#334155;stroke-width:1.5;stroke-dasharray:6 4}
+      .ln{stroke:#334155;stroke-width:1.6;fill:none} .lbl{font-size:12px;fill:#334155;font-style:italic}
+    </style>
+  </defs>
+  <rect width="1700" height="1010" fill="#f8fafc"/>
+  <text x="30" y="40" font-size="24" font-weight="700" fill="#0f172a">SunGrid AI Copilot: production architecture</text>
+  <text x="30" y="64" class="s">Retrieval and composition are separate from the eligibility tool call. The LLM never decides whether the tool is called, and code builds every eligibility reply.</text>
+
+  <!-- zones -->
+  <rect x="250" y="90" width="940" height="590" rx="12" fill="#eaf1fb" stroke="#7b9acc" stroke-width="1.5" stroke-dasharray="8 5"/>
+  <text x="268" y="114" class="z">CLOUD, SINGLE REGION, PRIVATE NETWORK (CPU ONLY, NO GPU)</text>
+  <rect x="1250" y="90" width="420" height="230" rx="12" fill="#eef0f3" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="8 5"/>
+  <text x="1268" y="114" class="z">EXTERNAL SaaS: ANTHROPIC API (HTTPS)</text>
+  <rect x="250" y="760" width="680" height="170" rx="12" fill="#fdf3e7" stroke="#d6a15f" stroke-width="1.5" stroke-dasharray="8 5"/>
+  <text x="268" y="784" class="z">ON-PREMISES / OWNER'S NETWORK</text>
+
+  <!-- member -->
+  <rect x="30" y="140" width="190" height="90" rx="8" class="box"/>
+  <text x="125" y="170" text-anchor="middle" class="h">Member</text>
+  <text x="125" y="190" text-anchor="middle" class="s">Web / chat widget</text>
+  <text x="125" y="208" text-anchor="middle" class="s">(support portal)</text>
+  <path d="M220,185 H290" class="ln" marker-end="url(#a)"/>
+  <text x="228" y="206" class="lbl">HTTPS</text>
+
+  <!-- copilot api -->
+  <rect x="270" y="125" width="590" height="535" rx="10" class="prop"/>
+  <text x="285" y="146" class="h">Copilot API (stateless service, 2+ replicas, 2 vCPU / 4 GB each)</text>
+  <rect x="290" y="160" width="550" height="56" rx="8" class="box"/>
+  <text x="565" y="184" text-anchor="middle" class="t b">1. Classify the query (Haiku 5.5, structured output)</text>
+  <text x="565" y="203" text-anchor="middle" class="s">category + intent; inconsistent or failed output = no filter, never calls the tool</text>
+  <!-- branches -->
+  <path d="M365,216 V282" class="ln" marker-end="url(#a)"/><text x="373" y="252" class="lbl">out_of_scope</text>
+  <path d="M565,216 V282" class="ln" marker-end="url(#a)"/><text x="573" y="252" class="lbl">eligibility_check</text>
+  <path d="M755,216 V282" class="ln" marker-end="url(#a)"/><text x="763" y="252" class="lbl">knowledge</text>
+
+  <rect x="290" y="282" width="150" height="100" rx="8" class="box"/>
+  <text x="365" y="308" text-anchor="middle" class="t b">2c. Refuse</text>
+  <text x="365" y="330" text-anchor="middle" class="s">non_relevant query:</text>
+  <text x="365" y="348" text-anchor="middle" class="s">fixed reply, no</text>
+  <text x="365" y="366" text-anchor="middle" class="s">retrieval</text>
+
+  <rect x="465" y="282" width="200" height="250" rx="8" class="box"/>
+  <text x="565" y="308" text-anchor="middle" class="t b">2b. Eligibility component</text>
+  <text x="565" y="326" text-anchor="middle" class="s">(separate from retrieval)</text>
+  <text x="565" y="354" text-anchor="middle" class="t">Extract 4 inputs (LLM,</text>
+  <text x="565" y="372" text-anchor="middle" class="t">null if not stated)</text>
+  <text x="565" y="398" text-anchor="middle" class="t">Validate in code</text>
+  <text x="565" y="416" text-anchor="middle" class="s">missing input = ask member,</text>
+  <text x="565" y="432" text-anchor="middle" class="s">tool not called</text>
+  <text x="565" y="458" text-anchor="middle" class="t">Call service (5 s timeout)</text>
+  <text x="565" y="484" text-anchor="middle" class="t">Templated reply</text>
+  <text x="565" y="502" text-anchor="middle" class="s">$ figure only if service said</text>
+  <text x="565" y="518" text-anchor="middle" class="s">eligible; any error = no figure</text>
+
+  <rect x="690" y="282" width="150" height="100" rx="8" class="box"/>
+  <text x="765" y="308" text-anchor="middle" class="t b">2a. Retrieve</text>
+  <text x="765" y="330" text-anchor="middle" class="s">embed query (CPU),</text>
+  <text x="765" y="348" text-anchor="middle" class="s">top 5, soft category</text>
+  <text x="765" y="366" text-anchor="middle" class="s">filter + fallback</text>
+  <path d="M765,382 V420" class="ln" marker-end="url(#a)"/>
+  <rect x="690" y="420" width="150" height="112" rx="8" class="box"/>
+  <text x="765" y="446" text-anchor="middle" class="t b">3. Compose</text>
+  <text x="765" y="468" text-anchor="middle" class="s">Haiku answers from</text>
+  <text x="765" y="486" text-anchor="middle" class="s">excerpts, must cite;</text>
+  <text x="765" y="504" text-anchor="middle" class="s">bad citation = "not</text>
+  <text x="765" y="520" text-anchor="middle" class="s">found" reply</text>
+  <text x="285" y="560" class="s">Embeddings: bge-small-en-v1.5 (384 dims)</text>
+  <text x="285" y="576" class="s">via fastembed on CPU, in process.</text>
+  <text x="285" y="598" class="s">The Anthropic key comes from the secrets</text>
+  <text x="285" y="614" class="s">manager as an environment variable.</text>
+  <text x="285" y="636" class="s">Each request writes one trace (cost, latency,</text>
+  <text x="285" y="652" class="s">chunks, scores, tool inputs and outputs).</text>
+
+  <!-- Qdrant -->
+  <rect x="960" y="282" width="210" height="100" rx="8" class="prop"/>
+  <text x="1065" y="308" text-anchor="middle" class="t b">Qdrant server</text>
+  <text x="1065" y="330" text-anchor="middle" class="s">vectors + category payload</text>
+  <text x="1065" y="348" text-anchor="middle" class="s">2 vCPU / 4 GB, SSD volume</text>
+  <text x="1065" y="366" text-anchor="middle" class="s">(prototype: local mode)</text>
+  <path d="M840,332 H960" class="ln" marker-end="url(#a)"/>
+
+  <!-- ingestion -->
+  <rect x="960" y="420" width="210" height="112" rx="8" class="box"/>
+  <text x="1065" y="446" text-anchor="middle" class="t b">Ingestion job</text>
+  <text x="1065" y="468" text-anchor="middle" class="s">batch, CPU, on doc change</text>
+  <text x="1065" y="486" text-anchor="middle" class="s">chunk per H2 section, embed,</text>
+  <text x="1065" y="504" text-anchor="middle" class="s">upsert with registry categories</text>
+  <path d="M1065,420 V382" class="ln" marker-end="url(#a)"/>
+
+  <!-- traces -->
+  <rect x="960" y="565" width="210" height="85" rx="8" class="prop"/>
+  <text x="1065" y="591" text-anchor="middle" class="t b">Traces + metrics</text>
+  <text x="1065" y="613" text-anchor="middle" class="s">logs to object storage,</text>
+  <text x="1065" y="631" text-anchor="middle" class="s">dashboard + alerts</text>
+  <path d="M860,607 H960" class="ln" marker-end="url(#a)"/>
+
+  <!-- anthropic -->
+  <rect x="1270" y="135" width="380" height="160" rx="8" class="box"/>
+  <text x="1460" y="162" text-anchor="middle" class="t b">Claude API</text>
+  <text x="1460" y="186" text-anchor="middle" class="t">Haiku 5.5 at runtime</text>
+  <text x="1460" y="204" text-anchor="middle" class="s">classify, extract inputs, compose answer</text>
+  <text x="1460" y="232" text-anchor="middle" class="t">Sonnet 5.5 for the offline judge only</text>
+  <text x="1460" y="252" text-anchor="middle" class="s">Haiku about $0.40 per 1,000 queries</text>
+  <text x="1460" y="270" text-anchor="middle" class="s">Message text leaves our network here</text>
+  <path d="M840,188 H1270" class="ln" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="900" y="180" class="lbl">HTTPS: classify, extract, compose</text>
+
+  <!-- repo -->
+  <rect x="1270" y="420" width="380" height="112" rx="8" class="prop"/>
+  <text x="1460" y="446" text-anchor="middle" class="t b">Git repository + CI</text>
+  <text x="1460" y="468" text-anchor="middle" class="s">code, prompts, docs/ knowledge base,</text>
+  <text x="1460" y="486" text-anchor="middle" class="s">doc registry, eval set. CI runs tests and</text>
+  <text x="1460" y="504" text-anchor="middle" class="s">the eval on every change to any of them</text>
+  <path d="M1270,476 H1170" class="ln" marker-end="url(#a)"/>
+
+  <!-- eligibility service -->
+  <path d="M565,532 V820" class="ln" marker-end="url(#a)"/>
+  <text x="575" y="700" class="lbl">private link / VPN, 5 s timeout, fail closed</text>
+  <rect x="380" y="820" width="370" height="90" rx="8" class="box"/>
+  <text x="565" y="846" text-anchor="middle" class="t b">Eligibility-check service (another team owns it)</text>
+  <text x="565" y="868" text-anchor="middle" class="s">stub_tools.check_rebate_eligibility today, unchanged</text>
+  <text x="565" y="886" text-anchor="middle" class="s">Host and auth are unknown: assumed reachable only</text>
+  <text x="565" y="902" text-anchor="middle" class="s">from the Copilot API, with a service credential</text>
+
+  <!-- human review -->
+  <rect x="960" y="760" width="370" height="150" rx="8" class="prop"/>
+  <text x="1145" y="786" text-anchor="middle" class="t b">Human review: support staff + content owners</text>
+  <text x="1145" y="810" text-anchor="middle" class="s">5% random sample of answers, every abstain</text>
+  <text x="1145" y="828" text-anchor="middle" class="s">and rejected citation, thumbs-down answers</text>
+  <text x="1145" y="846" text-anchor="middle" class="s">Staff take over refund, reversal, clawback</text>
+  <text x="1145" y="864" text-anchor="middle" class="s">and eligibility-dispute cases</text>
+  <text x="1145" y="888" text-anchor="middle" class="s">Content owners fix conflicting documents</text>
+  <path d="M1065,650 V760" class="ln" marker-end="url(#a)"/>
+  <text x="1075" y="712" class="lbl">sampled traces</text>
+  <path d="M1330,835 H1400 V560 H1460 V532" class="ln" marker-end="url(#a)"/>
+  <text x="1408" y="700" class="lbl">document fixes</text>
+
+  <!-- legend -->
+  <rect x="30" y="960" width="34" height="18" rx="3" class="box"/><text x="74" y="974" class="s">Built in the prototype</text>
+  <rect x="250" y="960" width="34" height="18" rx="3" class="prop"/><text x="294" y="974" class="s">Production target, not built</text>
+  <text x="520" y="974" class="s">Compute figures are sizing assumptions for a 69-chunk corpus, not measurements.</text>
+</svg>
