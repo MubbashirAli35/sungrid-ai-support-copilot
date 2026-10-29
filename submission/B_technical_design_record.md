@@ -158,6 +158,17 @@ Keeping it predictable:
 
 ## 7. Scope: what I cut, and one non-obvious trade-off
 
-**Cut:** No web UI, login or multi-turn memory; no reranker (BM25 fusion is built but off by default, and was not evaluated as an improvement); no server deployment or infrastructure code, so the diagram is a design; no redaction of member text in traces; no held-out classifier set (the classifier prompt was written after I read document 06, so 60/60 is optimistic); no feedback button. I spent the time on the gate and the evaluation because the brief weights both, and a measured modest score is worth more than an unmeasured high one.
+**Cut:** 
 
-**Trade-off: I left q03 failing instead of raising k.** Raising k from 5 to 10 probably fixes it and would turn 96% into a higher number. But k applies to every answer, so it adds cost, noise and more chances to cite the wrong chunk for all of them, to fix one question out of 20 that I had already seen. The real fix is rerank plus conflict detection, which is in section 3. I report the failure so that nobody reads the score as better than it is.
+- Chunking on the documents' own H2 sections (split further only past 250 words, at paragraph breaks) rather than recursive splitting. 
+- No web UI, or multi-turn memory 
+- No reranker (BM25 fusion is built but off by default as no improvement was seen with it on current knowledge based); 
+- No held-out classifier set (the classifier prompt was written after I read document 06, so 60/60 is optimistic)
+
+**Trade-offs:** 
+
+- I left q03 failing instead of raising k. Raising k from 5 to 10 probably fixes it and would turn 96% into a higher number. But k applies to every answer, so it adds cost, noise and more chances to cite the wrong chunk for all of them, to fix one question out of 20 that I had already seen. 
+    - The real fix is rerank plus conflict detection, which is in section 3. 
+
+- Eligibility is a routing branch, not a general tool mechanism. The classifier's intent decides that the eligibility component runs, so the gate can be tested without the model.  
+    - The cost is that the pipeline knows about this one service. A second decision made by an external service (for example a billing-adjustment check) is not a configuration change: it needs a new intent, a new component with its own validation and templates, and a change to the routing. An agent that picks tools would absorb a new tool more cheaply, but it would lose the guarantee in D1. I judged one such service too few to justify a general mechanism, and the point at which to revisit is the second or third.
