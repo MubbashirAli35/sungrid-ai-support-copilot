@@ -1,6 +1,6 @@
 # Change Control: Prompt and Model Changes
 
-Process document C(ii). Covers any change to a prompt in `copilot/prompts/` or `eval/judge_v1.md`, to `COPILOT_RUNTIME_MODEL` or `COPILOT_JUDGE_MODEL`, and to the retrieval settings that change what the model sees (`TOP_K`, `FALLBACK_MARGIN`, chunking). Roles as in the SOP: **Associate** (usually the proposer), **Lead** (approver), **Support Lead** (SunGrid sign-off on member-facing wording), **Backend engineer** (release and rollback). Commands run from the repository root with the virtualenv active.
+Covers any change to a prompt in `copilot/prompts/` or `eval/judge_v1.md`, to `COPILOT_RUNTIME_MODEL` or `COPILOT_JUDGE_MODEL`, and to the retrieval settings that change what the model sees (`TOP_K`, `FALLBACK_MARGIN`, chunking). Roles as in the SOP: **Associate** (usually the proposer), **Lead** (approver), **Support Lead** (SunGrid sign-off on member-facing wording), **Backend/DevOps engineer** (release and rollback). Commands run from the repository root with the virtualenv active.
 
 **Why these are controlled.** Prompts and models are code that nobody can read the behaviour of. On this system, one prompt line removed or one model swapped can silently turn the hard gate off or break citations. The first end-to-end run showed the second: a formatting habit of the model gave false "not found" answers on 2 questions.
 
@@ -20,7 +20,7 @@ When in doubt, treat a change as the higher class. `stub_tools.py` itself is own
 1. **Propose.** Open a ticket stating: what changes, why (the failing trace or question that motivated it), the expected effect, and the expected risk. Attach the trace ids that show the problem. One concern per change.
 2. **Branch and edit.** Prompts are files, versioned in Git. For a class B or C change, copy the prompt to a new name (`classifier_v2.md`) and point the code at it, so the old one stays on disk for rollback. Never edit a prompt in a deployed environment.
 3. **Test, offline.** Run `pytest` (no API calls, must pass in full). Then run the live evals against the **baseline report committed on `main`**: `python -m eval.run_eval retrieval`, `classifier`, `eligibility`, `e2e` (3 runs each, roughly $0.12 for all). Keep the new reports; do not overwrite the baseline until merge.
-4. **Compare.** The proposer writes a table of old versus new for every suite and lists **every question whose result changed**, in either direction. Look at the answers, not only the counts: the judge was only spot-checked, so read at least 5 changed answers by hand.
+4. **Compare.** The proposer writes a table of old versus new for every suite and lists **every question whose result changed**, in either direction. Look at the answers, not only the counts, read at least 5 changed answers by hand.
 5. **Gate checks (a failure blocks the change).**
    - Eligibility gate respected on every case, 100%.
    - No dollar figure in any non-eligible reply.
@@ -61,5 +61,4 @@ Copy into every class B, C and D ticket and tick each line.
 
 ## 5. Known gaps (to be fixed, and why they matter)
 - The pass thresholds are my starting values, not measured limits, and the evals are small (20 questions plus probes, one author), so a change can pass and still be worse. Grow the set from real traces every release.
-- The LLM judge is unvalidated beyond a spot check. Until staff labels are collected, read changed answers by hand.
 - Runs cannot be seeded (the runtime model rejects sampling settings), so results vary between runs. The 3-run rule exists for this; treat a one-question difference as noise unless it repeats.

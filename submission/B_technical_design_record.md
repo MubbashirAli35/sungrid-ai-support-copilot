@@ -161,6 +161,7 @@ Keeping it predictable:
 **Cut:** 
 
 - Chunking on the documents' own H2 sections (split further only past 250 words, at paragraph breaks) rather than recursive splitting. 
+- Incremental ingestion: every run re-chunks, re-embeds and rebuilds the whole collection (delete, then recreate), so adding one document costs a full ingest. At 69 chunks that takes seconds and cannot leave stale chunks behind. The delete-then-recreate is not atomic, so a failure mid-run leaves the index empty or partial; production would build a new collection and switch an alias, and re-embed only documents whose content hash changed (section 3).
 - No web UI, or multi-turn memory 
 - No reranker (BM25 fusion is built but off by default as no improvement was seen with it on current knowledge based); 
 - No held-out classifier set (the classifier prompt was written after I read document 06, so 60/60 is optimistic)
