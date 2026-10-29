@@ -22,7 +22,7 @@ Part D(ii). Team: the Lead (full time), one AI/DS Associate (full time), one bac
 | 14 | Runbooks: on-call, incident, the two process documents; handover training | Lead and Associate | 3 |
 | 15 | Go/no-go review, limited release, 7-day monitoring | Lead | 3 |
 
-Backend: items 2 to 6 total 15 days, which is the whole 50% allocation, so there is no spare capacity. Anything added to that engineer's list pushes the release. Associate: items 8 to 11, 13 and 14 total about 26 of 30 days, 4 days of buffer. The Associate's 30-day development plan (D3) uses items 8, 9 and 10 as their growth work.
+Backend: items 2 to 6 total 15 days, which is the whole 50% allocation, so there is no spare capacity. Anything added to that engineer's list pushes the release. Associate: items 8 to 11, 13 and 14 total about 26 of 30 days, 4 days of buffer. The Associate's 30-day development plan (D3) uses items 8 and 9 as their growth work.
 
 ## b. Weekly milestones
 
