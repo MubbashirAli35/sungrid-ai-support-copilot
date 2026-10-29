@@ -5,6 +5,8 @@ knowledge base (retrieval-augmented, with citations) and checks Rooftop Rebate e
 the provided `stub_tools.check_rebate_eligibility`, kept separate from retrieval and behind a hard gate.
 
 ## Setup
+Requires Python 3.10 or newer (tested on 3.10.12).
+
     python3 -m virtualenv .venv && source .venv/bin/activate   # python3 -m venv needs python3-venv
     pip install -r requirements.txt
     cp .env.example .env        # set ANTHROPIC_API_KEY (the only required variable)
