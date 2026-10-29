@@ -3,14 +3,14 @@
 
 See Diagram: `architecture-diagram.png` (source `architecture-diagram.svg`) for the full proposed architecture. How to run everything: Read repository `README.md`. 
 
-From the proposed solution, only following exists
+From the proposed solution, only the following exists:
 
 - A pipeline of classify, then one of three paths:
     - refuse (non-relevant) 
     - retrieve and answer with citations (knowledge)
     - check Rooftop Rebate eligibility through `stub_tools.check_rebate_eligibility` (unchanged). 
 
-Following this are not included due to time constraints and as they were beyond the deliverables of this assessment: 
+The following are not included due to time constraints and as they were beyond the deliverables of this assessment: 
 
 - An HTTP service
 - A remote Qdrant server (running locally currently) 
@@ -68,7 +68,7 @@ Easy to reverse at this size (re-ingest 69 chunks, re-run the eval), which is wh
 
 #### Offline
 
-All from `eval/reports/`; 20 questions plus probes, 3 runs each, one author, so weak evidence, not an actual accuracy estimate at scale
+All from `eval/reports/`; 20 questions plus probes, 3 runs each, one author, so weak evidence, not an actual accuracy estimate at scale.
 
 | Check | Result |
 |---|---|
@@ -77,11 +77,11 @@ All from `eval/reports/`; 20 questions plus probes, 3 runs each, one author, so 
 | Eligibility path, 8 cases x 3 runs | routed 24/24, inputs exact 24/24, gate respected 24/24 |
 | End to end, 23 questions x 3 runs, Sonnet 5.5 judge | 66/69 (96%): knowledge 33/36, ambiguous 6/6, eligibility 12/12, non-relevant 6/6, unanswerable probes 9/9 |
 
-The 3 failures are one question each run i.e Q3 (voting weight, docs 01 and 08 disagree). The answer comes from doc 08 alone, because doc 01's relevant chunk ranks 9th and the model sees only 5. The citation fix above came after seeing results (63/69 before, 66/69 after), so 96% is not a clean held-out figure. 
+The 3 failures are one question each run q03 (voting weight, docs 01 and 08 disagree). The answer comes from doc 08 alone, because doc 01's relevant chunk ranks 9th and the model sees only 5. The citation fix above came after seeing results (63/69 before, 66/69 after), so 96% is not a clean held-out figure. 
 
 **recall@5 is saturated because 5 chunks are 7% of the corpus.** 
 
-#### Monitoring in production. 
+#### Monitoring in production
 
 Every request already writes a trace (classification, chunks and scores, tool inputs and outputs, answer, cost, latency) in the proposed solution. 
 
@@ -104,7 +104,7 @@ Proposed:
     - Change: retrieve about 20, rerank to 5, add a conflict check over chunks about the same entity, and carry owner and effective date on every document.
 2. **The hand-labelled registry and full re-ingest.** 
     - Change: an LLM proposes labels and a person approves them, and ingestion re-embeds only documents whose content hash changed.
-3. **Qdrant local mode** locks its folder to one process and warns above about 20k points. Fine at 700, but it forces the move to a server (See below).
+3. **Qdrant local mode** locks its folder to one process and warns above about 20k points. Fine at 700, but it forces the move to a server (see below).
 
 **100x queries.**
 
@@ -156,14 +156,14 @@ Keeping it predictable:
 
 **One exception:** if the new category needs its own service call, that is a new intent and a new component built like eligibility, not a change to retrieval.
 
-## 7. Scope: what I cut, and one non-obvious trade-off
+## 7. Scope: what I cut, and the trade-offs
 
 **Cut:** 
 
 - Chunking on the documents' own H2 sections (split further only past 250 words, at paragraph breaks) rather than recursive splitting. 
 - Incremental ingestion: every run re-chunks, re-embeds and rebuilds the whole collection (delete, then recreate), so adding one document costs a full ingest. At 69 chunks that takes seconds and cannot leave stale chunks behind. The delete-then-recreate is not atomic, so a failure mid-run leaves the index empty or partial; production would build a new collection and switch an alias, and re-embed only documents whose content hash changed (section 3).
 - No web UI, or multi-turn memory 
-- No reranker (BM25 fusion is built but off by default as no improvement was seen with it on current knowledge based); 
+- No reranker (BM25 fusion is built but off by default as no improvement was seen with it on the current knowledge base) 
 - No held-out classifier set (the classifier prompt was written after I read document 06, so 60/60 is optimistic)
 
 **Trade-offs:** 

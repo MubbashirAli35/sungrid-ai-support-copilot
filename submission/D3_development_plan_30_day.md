@@ -23,4 +23,4 @@ Four routines, each aimed at one habit, running through real work:
 
 ## Weekly review
 
-Once every week we review his progress in 1:1 on everything above: the seeded-PR score, the LLM-use tables, the design notes and the resource reports.
+Once every week we review their progress in 1:1 on everything above: the seeded-PR score, the LLM-use tables, the design notes and the resource reports.

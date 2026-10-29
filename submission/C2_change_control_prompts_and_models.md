@@ -20,7 +20,7 @@ When in doubt, treat a change as the higher class. `stub_tools.py` itself is own
 1. **Propose.** Open a ticket stating: what changes, why (the failing trace or question that motivated it), the expected effect, and the expected risk. Attach the trace ids that show the problem. One concern per change.
 2. **Branch and edit.** Prompts are files, versioned in Git. For a class B or C change, copy the prompt to a new name (`classifier_v2.md`) and point the code at it, so the old one stays on disk for rollback. Never edit a prompt in a deployed environment.
 3. **Test, offline.** Run `pytest` (no API calls, must pass in full). Then run the live evals against the **baseline report committed on `main`**: `python -m eval.run_eval retrieval`, `classifier`, `eligibility`, `e2e` (3 runs each, roughly $0.12 for all). Keep the new reports; do not overwrite the baseline until merge.
-4. **Compare.** The proposer writes a table of old versus new for every suite and lists **every question whose result changed**, in either direction. Look at the answers, not only the counts, read at least 5 changed answers by hand.
+4. **Compare.** The proposer writes a table of old versus new for every suite and lists **every question whose result changed**, in either direction. Look at the answers, not only the counts. Read at least 5 changed answers by hand.
 5. **Gate checks (a failure blocks the change).**
    - Eligibility gate respected on every case, 100%.
    - No dollar figure in any non-eligible reply.

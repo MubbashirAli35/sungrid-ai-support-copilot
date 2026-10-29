@@ -41,7 +41,7 @@ The structure is right (classify, then tool or retrieve, then compose; the tool 
 - Errors are not handled anywhere: a failed embedding or chat call raises through `agent.py` and kills the session. `except Exception` at `agent.py:59` hides which error. 
 - `requirements.txt` lists `openai` and `numpy` with no versions; results and failures cannot be reproduced. 
 - No tests, no logging or traces; the `print` calls (`classifier.py:28`, `agent.py:56`) are the only record of what happened and would print member data in production.
-- DOC_CATEGORY[prefix]` (`ingest.py:19`) raises `KeyError` for any new document, and category data lives in the code, so adding a document is a code change.
+- `DOC_CATEGORY[prefix]` (`ingest.py:19`) raises `KeyError` for any new document, and category data lives in the code, so adding a document is a code change.
 - The classifier prompt gives only category names, no definitions, no examples and no output format check. It has to guess at the boundary between "Incentive & Rebate" and "Billing & Account".
 
 ## Low
